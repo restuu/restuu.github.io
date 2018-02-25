@@ -1,9 +1,11 @@
 # restuu.github.io
 
 #About This Site:
+
 This is my first trial on making a website
 
 ##Used Tags and Syntaxes
+
 Tags and syntaxes that I've been using when creating a simple website are:
 
 ```html
