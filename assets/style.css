@@ -1,0 +1,29 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: auto;
+}
+
+header {
+  height: 100px;
+  width: 100%;
+  border: 1px solid black;
+}
+
+main {
+  position: relative;
+  top: 25px;
+  width: 700px;
+  min-height: 700px;
+  border: 1px solid red;
+  margin: auto;
+}
+
+footer {
+  position: relative;
+  top: 25px;
+  width: 100%;
+  height: 75px;
+  border: 1px solid green;
+}
