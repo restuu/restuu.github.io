@@ -1,0 +1,77 @@
+html,
+body {
+  background-image: url(./img/sample-pattern.png);
+  background-repeat: repeat;
+  margin: 0;
+  padding: 0;
+  height: auto;
+}
+
+header {
+  height: 50px;
+  width: 100%;
+  position: fixed;
+  background-color: white;
+  z-index: 10;
+  margin: auto;
+}
+
+img {
+  float: left;
+}
+
+nav {
+  float: right;
+  margin-right: 20px;
+}
+
+nav a li {
+  display: inline-block;
+  margin-right: 10px;
+}
+
+section {
+  position: relative;
+  top: 75px;
+  min-height: 700px;
+  width: 650px;
+  margin: auto;
+  padding-bottom: 50px;
+}
+
+h1 {
+  font-size: 40px;
+  text-align: center;
+  color: #263b51;
+}
+
+article a {
+  text-decoration: none;
+}
+
+footer {
+  position: relative;
+  height: 50px;
+  width: 100%;
+  top: 75px;
+  left: 0;
+  right: 0;
+  background-color: black;
+  margin-bottom:-50px;
+}
+
+footer h5 {
+  text-align: center;
+  line-height: 50px;
+  font-size: 16px;
+  color: white;
+  border: 1px solid red;
+  margin-bottom: -50px;
+}
+
+#article-list article {
+  margin: 3px;
+  padding: 5px;
+  box-sizing: border-box;
+  background-color: white;
+}
