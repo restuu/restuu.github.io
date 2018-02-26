@@ -16,7 +16,7 @@ header {
   width: 1000px;
   border: 1px solid black;
   margin: auto;
-  padding: 10px;
+  padding: auto;
 }
 
 header img {
