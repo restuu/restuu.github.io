@@ -5,6 +5,12 @@ body {
   height: auto;
 }
 
+h1,
+h2,
+p {
+  font-family: sans-serif;
+}
+
 header {
   height: 300px;
   width: 1000px;
@@ -27,10 +33,6 @@ header h1 {
   margin: 0;
 }
 
-header nav {
-  float: right;
-}
-
 main {
   position: relative;
   top: 20px;
@@ -48,12 +50,6 @@ footer {
   border: 1px solid green;
 }
 
-h1,
-h2,
-p {
-  font-family: sans-serif;
-}
-
 table {
   font-size: 18px;
   font-family: sans-serif;
@@ -64,7 +60,7 @@ table {
   float: left;
   margin-left: 50px;
   height: 250px;
-  width: auto;
+  width: 400px;
   border: 1px solid red;
 }
 
@@ -72,9 +68,22 @@ table {
   text-align: left;
 }
 
-.navigation a {
-  font-family: sans-serif;
+#profile table {
+  float: left;
+}
+
+.social-media {
+  float: left;
+  line-height: 40px;
   text-decoration: none;
-  margin-right: 10px;
-  line-height: 50px;
+}
+
+.social-media img {
+  height: 40px;
+  width: auto;
+  margin-top: 0;
+}
+
+.social-media a {
+  text-decoration: none;
 }
