@@ -15,12 +15,8 @@ Tags and syntaxes that I've been using when creating a simple website are:
     <link rel="stylesheet" href="assets/style.css">
   </head>
   <body>
-    <header>
-      
-    </header>
-    <main>
-
-    </main>
+    <header></header>
+    <main></main>
     <footer></footer>
   </body>
 </html>
