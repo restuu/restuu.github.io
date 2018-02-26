@@ -6,15 +6,35 @@ body {
 }
 
 header {
-  height: 100px;
-  width: 100%;
+  height: 300px;
+  width: 1000px;
   border: 1px solid black;
+  margin: auto;
+  padding: 10px;
+}
+
+header img {
+  float: left;
+  height: 250px;
+  width: auto;
+}
+
+header h1 {
+  float: left;
+  font-family: sans-serif;
+  line-height: 50px;
+  border: 1px solid blue;
+  margin: 0;
+}
+
+header nav {
+  float: right;
 }
 
 main {
   position: relative;
-  top: 25px;
-  width: 700px;
+  top: 20px;
+  width: 1000px;
   min-height: 700px;
   border: 1px solid red;
   margin: auto;
@@ -26,4 +46,35 @@ footer {
   width: 100%;
   height: 75px;
   border: 1px solid green;
+}
+
+h1,
+h2,
+p {
+  font-family: sans-serif;
+}
+
+table {
+  font-size: 18px;
+  font-family: sans-serif;
+  border: 1px solid green;
+}
+
+#profile {
+  float: left;
+  margin-left: 50px;
+  height: 250px;
+  width: auto;
+  border: 1px solid red;
+}
+
+#profile th {
+  text-align: left;
+}
+
+.navigation a {
+  font-family: sans-serif;
+  text-decoration: none;
+  margin-right: 10px;
+  line-height: 50px;
 }
