@@ -1,0 +1,42 @@
+// 1. newton second law
+
+store "force" with 0
+store "mass" with 600
+store "acceleration" with 2
+
+calculate 'mass' * 'acceleration'
+set 'force' with result
+
+display 'force'
+
+// 2. tahun kabisat
+
+store 'year' with 0
+
+if 'year' % 4 = 0 and 'year' % 100 > 0
+  display 'kabisat'
+else if 'year' % 4 = 0 and 'year' % 100 = 0
+  calculate 'year' % 400
+  if 'year' % 400 = 0
+    display 'kabisat'
+
+// 3. laundry display
+
+store 'pakaian' with 0
+
+while 'pakaian' < 20
+  add 'pakaian' by 1
+
+do 'laundry'
+
+// 4. periksa kuku
+
+store 'student' with 1
+store 'long nail' with 1
+
+while 'student' < 41
+  display 'student'
+  if 'student' = 1
+    do 'praise'
+  else
+    do 'scold'
