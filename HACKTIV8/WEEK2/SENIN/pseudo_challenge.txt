@@ -34,9 +34,10 @@ do 'laundry'
 store 'student' with 1
 store 'long nail' with 1
 
-while 'student' < 41
+while 'student' < 40
   display 'student'
-  if 'student' = 1
-    do 'praise'
-  else
+  call 'long nail'
+  if 'long nail' = 1
     do 'scold'
+  else
+    do 'praise'
