@@ -12,13 +12,20 @@ display 'force'
 // 2. tahun kabisat
 
 store 'year' with 0
+calculate 'year' % 4
+store 'mod result' to result of calculation
 
-if 'year' % 4 = 0 and 'year' % 100 > 0
-  display 'kabisat'
-else if 'year' % 4 = 0 and 'year' % 100 = 0
-  calculate 'year' % 400
-  if 'year' % 400 = 0
+if 'mod result' = 0
+  calculate 'year' % 100
+  if 'year' % 100 != 0
     display 'kabisat'
+  else
+    calculate 'year' % 400
+    if 'year' % 400 = 0
+      display 'kabisat'
+    end if
+  end if
+end if
 
 // 3. laundry display
 
@@ -34,10 +41,12 @@ do 'laundry'
 store 'student' with 1
 store 'long nail' with 1
 
-while 'student' < 40
+while 'student' < 41
   display 'student'
   call 'long nail'
   if 'long nail' = 1
     do 'scold'
   else
     do 'praise'
+  end if
+end while
