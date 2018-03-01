@@ -4,41 +4,43 @@ var tahun = 2018;
 
 switch (bulan) {
   case 1:
-    console.log(tanggal + ' Januari ' + tahun);
+    bulan = ' Januari ';
     break;
   case 2:
-    console.log(tanggal + ' Februari ' + tahun);
+    bulan = ' Februari ';
     break;
   case 3:
-    console.log(tanggal + ' Maret ' + tahun);
+    bulan = ' Maret ';
     break;
   case 4:
-    console.log(tanggal + ' April ' + tahun);
+    bulan = ' April ';
     break;
   case 5:
-    console.log(tanggal + ' Mei ' + tahun);
+    bulan = ' Mei ';
     break;
   case 6:
-    console.log(tanggal + ' Juni ' + tahun);
+    bulan = ' Juni ';
     break;
   case 7:
-    console.log(tanggal + ' Juli ' +tahun);
+    bulan = ' Juli ';
     break;
   case 8:
-    console.log(tanggal + ' Agustus ' +tahun);
+    bulan = ' Agustus ';
     break;
   case 9:
-    console.log(tanggal + ' September ' +tahun);
+    bulan = ' September ';
     break;
   case 10:
-    console.log(tanggal + ' Oktober ' +tahun);
+    bulan = ' Oktober ';
     break;
   case 11:
-    console.log(tanggal + ' November ' +tahun);
+    bulan = ' November ';
     break;
   case 12:
-    console.log(tanggal + ' Desember ' +tahun);
+    bulan = ' Desember ';
     break;
   default:
-    console.log(tanggal + ' undefined ' + tahun);
+    bulan = ' undefined ';
 }
+
+console.log(tanggal + bulan + tahun);
