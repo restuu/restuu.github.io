@@ -72,7 +72,7 @@ for (var i = 1; i <= 100; i+=5) {
 console.log('-----------------------------------------------------');
 // Nomor 3.4
 
-console.log('KELIPATAN 9');
+console.log('KELIPATAN 10');
 
 for (var i = 1; i <= 100; i+=9) {
   if (i % 10 === 0) {
