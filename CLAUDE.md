@@ -27,6 +27,7 @@ _ds/broadsheet-.../      The "Broadsheet" design system, shared by every page on
 learning/                The learning platform, one level down from the site root.
   Library.dc.html          Topic index. Links back to ../index.html.
   Query Engine.dc.html     Topic 01. Links back to Library.dc.html.
+certificates/             PDF certificates linked from index.html's Certifications section.
 ```
 
 `learning/*.dc.html` reference `../support.js` and `../_ds/...` — one level up from
