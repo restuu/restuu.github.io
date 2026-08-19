@@ -22,7 +22,7 @@
 
 <div style="max-width: 1080px; margin: 0 auto; padding: var(--space-8) var(--space-6) 120px; font-family: var(--font-body); font-size: 16px; line-height: 1.6">
 
-  <header style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); padding-bottom: var(--space-2); border-bottom: 3px solid var(--color-text)">
+  <header style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); padding-bottom: var(--space-2); border-bottom: 3px solid var(--color-text)">
     <div>
       <a href="../index.html" style="display: block; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px">← Restu Utomo</a>
       <div style="font-family: var(--font-heading); font-weight: 600; font-size: 20px">Engineering Notes</div>
@@ -31,8 +31,8 @@
   </header>
   <div style="height: 1px; background: var(--color-text); margin-top: 3px; margin-bottom: var(--space-8)"></div>
 
-  <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr); gap: var(--space-8); align-items: end; margin-bottom: var(--space-8)">
-    <h1 style="font-size: 68px; line-height: 1.0; margin: 0">How the systems<br>underneath actually work</h1>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-8); align-items: start; margin-bottom: var(--space-8)">
+    <h1 style="font-size: clamp(38px, 7vw, 68px); line-height: 1.05; margin: 0">How the systems underneath actually work</h1>
     <p style="margin: 0; color: color-mix(in srgb, var(--color-text) 75%, transparent)">Each topic starts with a plain description of what the thing is and what it is for, then goes deep, with a worked example carried end to end and an animation where movement explains it better than words.</p>
   </div>
 

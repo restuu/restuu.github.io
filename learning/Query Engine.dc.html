@@ -27,9 +27,9 @@
     <span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Topic 01 · Foundations</span>
   </div>
 
-  <header style="display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: var(--space-8); align-items: start; margin-bottom: var(--space-8)">
+  <header style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-8); align-items: start; margin-bottom: var(--space-8)">
     <div>
-      <h1 style="font-size: 64px; line-height: 1.02; margin: 0 0 var(--space-4)">The query engine</h1>
+      <h1 style="font-size: clamp(38px, 7vw, 64px); line-height: 1.05; margin: 0 0 var(--space-4)">The query engine</h1>
       <p style="font-size: 21px; line-height: 1.45; max-width: 26em; margin: 0 0 var(--space-3)">A query engine is the component that takes a declarative query, decides how to compute it, and executes that decision. Every relational database contains one — Postgres, MySQL and SQLite included.</p>
       <p style="max-width: 34em; margin: 0 0 var(--space-3); color: color-mix(in srgb, var(--color-text) 78%, transparent)">You never tell it <em>how</em> to get the answer, only what answer you want. Everything between those two things is the engine: parse the text, build a plan, rewrite the plan into a cheaper equivalent, then run it against bytes on disk. PostgreSQL's own manual puts the planner's job plainly — a query <a href="https://www.postgresql.org/docs/current/planner-optimizer.html" target="_blank">can be executed in a wide variety of different ways, each producing the same results</a>, and the optimizer's task is to pick the one expected to be fastest.</p>
       <p style="max-width: 34em; margin: 0; color: color-mix(in srgb, var(--color-text) 78%, transparent)">So this page starts general. The eight stages below exist in essentially every SQL system built since the 1970s. Only stages 6 to 8 diverge sharply between a transactional database and an analytical one, and that is exactly where the section after next draws the line.</p>
@@ -152,7 +152,7 @@ T1: COMMIT</pre>
 
   <section style="margin-bottom: var(--space-8)">
     <h6 style="color: var(--color-accent-700); margin-bottom: var(--space-3)">The query we will follow all the way down</h6>
-    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-6); align-items: start">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-6); align-items: start">
       <pre style="font-family: 'Source Code Pro', ui-monospace, monospace; font-size: 14px; line-height: 1.7; margin: 0; padding: var(--space-4); background: var(--color-neutral-100); border-radius: var(--radius-md); overflow-x: auto">SELECT  r.region_name,
         SUM(s.amount) AS revenue
 FROM    sales s
@@ -183,7 +183,7 @@ ORDER BY revenue DESC;</pre>
         <h2 style="font-size: 34px; margin: 0 0 4px">Watch the query travel</h2>
         <p style="margin: 0; font-size: 15px; color: color-mix(in srgb, var(--color-text) 70%, transparent)">Press play and the same query is rewritten, stage by stage, from text into work. Click any stage to read it in full. Every stage carries a split panel naming what Postgres does and what an analytical engine does, so you can always see which side you are looking at.</p>
       </div>
-      <div style="display: flex; align-items: center; gap: var(--space-2)">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2)">
         <button class="btn btn-primary" onClick="{{ togglePlay }}" style="min-width: 96px">{{ playLabel }}</button>
         <button class="btn btn-secondary" onClick="{{ stepBack }}">Back</button>
         <button class="btn btn-secondary" onClick="{{ stepFwd }}">Step</button>
@@ -191,7 +191,7 @@ ORDER BY revenue DESC;</pre>
       </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: var(--space-6); align-items: start">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--space-6); align-items: start">
 
       <div style="display: flex; flex-direction: column; gap: 2px" role="tablist">
         <sc-for list="{{ stages }}" as="st" hint-placeholder-count="8">

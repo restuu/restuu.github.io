@@ -76,6 +76,24 @@ python3 -m http.server 8787
 
 ## Conventions
 
+- **This site must work on mobile.** There is no separate mobile stylesheet and no
+  `@media` breakpoints in use — layouts are expected to reflow with fluid CSS instead.
+  Concretely: never split a section into a fixed-ratio two-column
+  `grid-template-columns` (e.g. `minmax(0, 1.3fr) minmax(0, 0.7fr)`) or a grid with a
+  hard pixel track (e.g. `380px minmax(0, 1fr)`) — both hold their column count at any
+  viewport width and either crush or overflow on a phone. Use
+  `grid-template-columns: repeat(auto-fit, minmax(<px>, 1fr))` instead, so columns
+  collapse to one per row once the viewport can't fit them side by side (this is
+  already the pattern most of the site's grids use). Give large display headings
+  (anything above ~40px) a `clamp(<min>, <vw>, <max>)` font-size rather than a bare
+  px value, and add `flex-wrap: wrap` to any flex row that could hold more content
+  than a narrow screen's width (nav bars, button groups, tag lists). Check any new
+  section at a ~380–400px container width before considering it done — the design
+  system ships no device emulation helper, so simulate it by cloning the page's root
+  content div into a fixed-width absolutely-positioned wrapper via a scratch
+  `javascript_tool` snippet and screenshotting that, rather than trusting a resized
+  browser window (window-resize does not reliably reach the real viewport in this
+  environment).
 - **Never hard-code a hex, font name, px value, radius or shadow.** Take them from the
   Broadsheet tokens: `var(--color-*)`, `var(--font-*)`, `var(--space-*)`,
   `var(--radius-*)`, `var(--shadow-*)`. `_ds/.../readme.md` is the reference.
