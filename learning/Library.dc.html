@@ -38,20 +38,22 @@
 
   <section style="margin-bottom: var(--space-8)">
     <h6 style="color: var(--color-accent-700); margin-bottom: var(--space-4)">Ready to read</h6>
-    <a href="Query Engine.dc.html" style="display: grid; grid-template-columns: 90px minmax(0, 1fr) auto; gap: var(--space-6); align-items: start; padding: var(--space-4) var(--space-3); background: var(--color-accent-100); border-left: 3px solid var(--color-accent); border-radius: var(--radius-md); transition: background .2s" style-hover="background: var(--color-accent-200)">
-      <span style="font-family: 'Source Code Pro', monospace; font-size: 34px; line-height: 1; color: var(--color-accent-700)">01</span>
-      <span style="display: block; min-width: 0">
-        <span style="display: block; font-family: var(--font-heading); font-weight: 600; font-size: 30px; line-height: 1.1; margin-bottom: 6px; color: var(--color-text)">The query engine</span>
-        <span style="display: block; color: color-mix(in srgb, var(--color-text) 78%, transparent); max-width: 44em">From SQL text to an execution plan to bytes read off disk. Eight stages, one query followed all the way down — the same query that takes 48 seconds and then 0.9 seconds — and where the performance actually comes from.</span>
-        <span style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: var(--space-2)">
-          <span class="tag tag-accent">Parsing</span>
-          <span class="tag tag-accent">Logical plans</span>
-          <span class="tag tag-accent">Optimization</span>
-          <span class="tag tag-accent">Physical operators</span>
-          <span class="tag tag-accent">Indexing</span>
-          <span class="tag tag-accent">Vectorized execution</span>
-          <span class="tag tag-accent">Columnar pushdown</span>
-          <span class="tag tag-accent">Distributed</span>
+    <a href="Query Engine.dc.html" style="display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); align-items: start; padding: var(--space-4) var(--space-3); background: var(--color-accent-100); border-left: 3px solid var(--color-accent); border-radius: var(--radius-md); transition: background .2s" style-hover="background: var(--color-accent-200)">
+      <span style="display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: var(--space-4); flex: 1 1 320px; min-width: 0">
+        <span style="font-family: 'Source Code Pro', monospace; font-size: 34px; line-height: 1; color: var(--color-accent-700)">01</span>
+        <span style="display: block; min-width: 0">
+          <span style="display: block; font-family: var(--font-heading); font-weight: 600; font-size: 30px; line-height: 1.1; margin-bottom: 6px; color: var(--color-text)">The query engine</span>
+          <span style="display: block; color: color-mix(in srgb, var(--color-text) 78%, transparent); max-width: 44em">From SQL text to an execution plan to bytes read off disk. Eight stages, one query followed all the way down — the same query that takes 48 seconds and then 0.9 seconds — and where the performance actually comes from.</span>
+          <span style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: var(--space-2)">
+            <span class="tag tag-accent">Parsing</span>
+            <span class="tag tag-accent">Logical plans</span>
+            <span class="tag tag-accent">Optimization</span>
+            <span class="tag tag-accent">Physical operators</span>
+            <span class="tag tag-accent">Indexing</span>
+            <span class="tag tag-accent">Vectorized execution</span>
+            <span class="tag tag-accent">Columnar pushdown</span>
+            <span class="tag tag-accent">Distributed</span>
+          </span>
         </span>
       </span>
       <span style="font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); white-space: nowrap; padding-top: 12px">Read →</span>
