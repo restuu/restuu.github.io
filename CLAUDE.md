@@ -1,5 +1,8 @@
 # restuu.github.io
 
+Agent-facing build/maintenance notes for this repo. For the human-readable project
+overview (what the site is, live URL, how to run it), see [`README.md`](README.md).
+
 Muhammad Restu Utomo's personal site: a portfolio (`index.html`) combined with a
 **self-learning platform** (`learning/`) — a growing library of deep-dive engineering
 topics, one topic at a time. Each topic is a single self-contained page that starts
