@@ -104,6 +104,13 @@ python3 -m http.server 8787
 - Body copy in the accent uses a deep ramp step (`--color-accent-700`); the base accent
   only clears 3:1 against the ground, which is enough for chrome and large text only.
 - Do not edit `support.js` or `_ds_bundle.js` — both are generated.
+- **Favicon.** Unless told otherwise, every new HTML page gets the same favicon as
+  `index.html`: copy its `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,...">`
+  tag from `index.html`'s `<helmet>` verbatim into the new page's `<helmet>` (same
+  position as the stylesheet link). It's an inline SVG data URI — a cyan
+  (`--color-accent`) circle, a paper-white (`--color-bg`) serif "R", and a small
+  magenta (`--color-accent-2`) dot — not a binary `.ico` file, so there's nothing to
+  generate or convert; just reuse the tag as-is.
 - **Stages vs. sections.** A *stage* in the numbered walkthrough (the `STAGES` array,
   `is1`…`isN` flags) models a step the query travels through in sequential order.
   Only add one when the content is genuinely a sequential step — inserting a stage
@@ -122,7 +129,8 @@ python3 -m http.server 8787
 
 1. Create `learning/<Topic Name>.dc.html`, copying the structure of
    `learning/Query Engine.dc.html` (head → `<x-dc>` → `<helmet>` → content →
-   `data-dc-script`), including the `../support.js` and `../_ds/...` relative paths.
+   `data-dc-script`), including the `../support.js` and `../_ds/...` relative paths
+   and the favicon `<link>` (see Conventions above).
 2. Link back to the index with `<a href="Library.dc.html">← Library</a>` and label the
    topic number in the kicker.
 3. Move the topic's card in `learning/Library.dc.html` from "Planned next" into
