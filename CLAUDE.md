@@ -1,0 +1,123 @@
+# restuu.github.io
+
+Muhammad Restu Utomo's personal site: a portfolio (`index.html`) combined with a
+**self-learning platform** (`learning/`) — a growing library of deep-dive engineering
+topics, one topic at a time. Each topic is a single self-contained page that starts
+with a plain description of what the thing is and what it is for, then goes deep with
+a worked example carried end to end plus an animation where movement explains it
+better than prose.
+
+**Currently available topic: the query engine** (Topic 01 · Foundations). It follows
+one SQL query through eight stages — parse and bind, logical plan, statistics,
+optimize, physical operators, execution model, columnar and pushdown, distributed
+execution — contrasting a transactional engine (Postgres/MySQL) with an analytical
+one (DuckDB, ClickHouse, Trino, Polars) at every stage. Topics 02–05 (columnar file
+formats, DataFrame engines, indexing, memory management and spilling) are listed on
+the library page as planned, not yet written.
+
+## Layout
+
+```
+index.html              Portfolio / about-me home page. Entry point (GitHub Pages root).
+support.js               The `dc-runtime` — parses <x-dc> and renders it. Generated; do not edit.
+_ds/broadsheet-.../      The "Broadsheet" design system, shared by every page on the site.
+  styles.css               Design tokens + component classes. Source of truth for the look.
+  _ds_bundle.js            Compiled system JS (inlines print-plates.js — the CMYK plate SVG filters).
+  readme.md                How to use the system: tokens, components, do/don't. Read before styling.
+learning/                The learning platform, one level down from the site root.
+  Library.dc.html          Topic index. Links back to ../index.html.
+  Query Engine.dc.html     Topic 01. Links back to Library.dc.html.
+```
+
+`learning/*.dc.html` reference `../support.js` and `../_ds/...` — one level up from
+where the learning-platform pages used to sit as repo-root files. If you copy a page
+in or out of `learning/`, fix those relative paths.
+
+The `learning/` pages mirror the standalone `me_learning_code` Claude Design project's
+paths one level down; keep that subtree flat so it can still round-trip via the
+`claude_design` MCP (`DesignSync`) into that project. `index.html` and the shared
+`_ds/`/`support.js` at the repo root are specific to this site and are not part of
+that round-trip.
+
+## How the pages work
+
+These are **`.dc.html` (Design Canvas) documents**, not plain HTML — `index.html` is
+too, even though it keeps the `.html` extension for GitHub Pages routing. Each page is:
+
+- `<script src="./support.js">` (or `../support.js` under `learning/`) in `<head>` —
+  the runtime. It injects React 18 UMD from unpkg **at page load**, so pages need
+  network access. (Babel standalone is also fetched, but only lazily for
+  `x-import`ed JSX modules — no page here uses that.)
+- `<x-dc>` — the template. Inside it, `<helmet>` carries the stylesheet/font/bundle
+  links, and the markup uses runtime directives:
+  - `{{ expr }}` — bind to a value from `renderVals()`
+  - `<sc-for list="{{ items }}" as="item">` — repeat
+  - `<sc-if value="{{ flag }}">` — conditional
+  - `onClick="{{ handler }}"`, `style-hover="..."` — events and hover styles
+- `<script type="text/x-dc" data-dc-script data-props="...">` at the end of `<body>` —
+  a `class Component extends DCLogic` with `state`, lifecycle methods, and
+  `renderVals()` returning everything the template binds to. `data-props` declares
+  editor-tunable props (`playbackMs`, `showRedFlags` on the query engine page).
+  `index.html` and `Library.dc.html` are static and skip this script entirely.
+
+The query engine page's `Component` holds `{ step, playing }` and drives the
+eight-stage walkthrough: Play/Back/Step/Reset buttons, a clickable stage rail, and
+`is1`…`is8` booleans selecting which `<sc-if>` panel shows.
+
+## Running it
+
+Serve over HTTP from the repo root — do not open with `file://`:
+
+```bash
+python3 -m http.server 8787
+# then http://localhost:8787/index.html
+# or    http://localhost:8787/learning/Library.dc.html
+```
+
+## Conventions
+
+- **Never hard-code a hex, font name, px value, radius or shadow.** Take them from the
+  Broadsheet tokens: `var(--color-*)`, `var(--font-*)`, `var(--space-*)`,
+  `var(--radius-*)`, `var(--shadow-*)`. `_ds/.../readme.md` is the reference.
+- Broadsheet is newsprint: Source Serif 4 throughout (no sans-serif for chrome),
+  paper-white ground, cyan `--color-accent` for interactive elements, magenta
+  `--color-accent-2` as the rarer second spot. Separate sections with whitespace, not
+  rules, borders or boxes. Reserve `.card` for genuinely discrete listings.
+- Body copy in the accent uses a deep ramp step (`--color-accent-700`); the base accent
+  only clears 3:1 against the ground, which is enough for chrome and large text only.
+- Do not edit `support.js` or `_ds_bundle.js` — both are generated.
+- **Stages vs. sections.** A *stage* in the numbered walkthrough (the `STAGES` array,
+  `is1`…`isN` flags) models a step the query travels through in sequential order.
+  Only add one when the content is genuinely a sequential step — inserting a stage
+  means renumbering every stage after it (the array, the flags,
+  `hint-placeholder-count`, and every stage-numbered cross-reference in prose). A
+  cross-cutting or reference topic (how indexes work, a diagnostics checklist) belongs
+  in its own standalone `<section>` instead, styled like the query engine page's
+  "First: OLTP and OLAP" or "Red flags in a query profile" sections — no renumbering,
+  no animation. Default to a section; treat a new stage as the exception.
+- Write for a human reader first: explain jargon inline the first time it appears (as
+  the query engine page does for terms like *cardinality* or *selectivity*), and prefer
+  a plain sentence over a denser one. A reader should never need to leave the page to
+  follow a sentence.
+
+## Adding a topic
+
+1. Create `learning/<Topic Name>.dc.html`, copying the structure of
+   `learning/Query Engine.dc.html` (head → `<x-dc>` → `<helmet>` → content →
+   `data-dc-script`), including the `../support.js` and `../_ds/...` relative paths.
+2. Link back to the index with `<a href="Library.dc.html">← Library</a>` and label the
+   topic number in the kicker.
+3. Move the topic's card in `learning/Library.dc.html` from "Planned next" into
+   "Ready to read", matching the existing anchor markup.
+
+Whenever content is added to a topic (a claim, stat, example, or explanation sourced
+from elsewhere), include a link to the source alongside it. Uncited claims should not
+be added.
+
+## About-me content
+
+`index.html`'s career facts (roles, dates, education, skills) are sourced from
+[LinkedIn](https://www.linkedin.com/in/muhammad-restu-utomo-75478513b) plus direct
+corrections from Restu. When updating them, keep the source note at the bottom of the
+page current and prefer what Restu tells you directly over what LinkedIn shows, since
+LinkedIn can lag behind an actual job change.

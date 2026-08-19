@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="../support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="../_ds/broadsheet-f3948c02-081d-43fa-8404-dbdfd008adad/styles.css">
+<script src="../_ds/broadsheet-f3948c02-081d-43fa-8404-dbdfd008adad/_ds_bundle.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Source+Code+Pro:wght@400;600&display=swap">
+<style>
+  body { margin: 0; background: var(--color-bg); color: var(--color-text); }
+  a { color: var(--color-accent-700); text-decoration: none; }
+  a:hover { color: var(--color-accent-2); text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+</style>
+</helmet>
+
+<div style="max-width: 1180px; margin: 0 auto; padding: var(--space-8) var(--space-6) 120px; font-family: var(--font-body); font-size: 16px; line-height: 1.6">
+
+  <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-8)">
+    <a href="Library.dc.html" style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase">← Library</a>
+    <span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Topic 01 · Foundations</span>
+  </div>
+
+  <header style="display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); gap: var(--space-8); align-items: start; margin-bottom: var(--space-8)">
+    <div>
+      <h1 style="font-size: 64px; line-height: 1.02; margin: 0 0 var(--space-4)">The query engine</h1>
+      <p style="font-size: 21px; line-height: 1.45; max-width: 26em; margin: 0 0 var(--space-3)">A query engine is the component that takes a declarative query, decides how to compute it, and executes that decision. Every relational database contains one — Postgres, MySQL and SQLite included.</p>
+      <p style="max-width: 34em; margin: 0 0 var(--space-3); color: color-mix(in srgb, var(--color-text) 78%, transparent)">You never tell it <em>how</em> to get the answer, only what answer you want. Everything between those two things is the engine: parse the text, build a plan, rewrite the plan into a cheaper equivalent, then run it against bytes on disk. PostgreSQL's own manual puts the planner's job plainly — a query <a href="https://www.postgresql.org/docs/current/planner-optimizer.html" target="_blank">can be executed in a wide variety of different ways, each producing the same results</a>, and the optimizer's task is to pick the one expected to be fastest.</p>
+      <p style="max-width: 34em; margin: 0; color: color-mix(in srgb, var(--color-text) 78%, transparent)">So this page starts general. The eight stages below exist in essentially every SQL system built since the 1970s. Only stages 6 to 8 diverge sharply between a transactional database and an analytical one, and that is exactly where the section after next draws the line.</p>
+    </div>
+    <div class="card elev-sm" style="margin-top: var(--space-2)">
+      <div class="card-kicker">A note on vocabulary</div>
+      <div class="card-body" style="font-size: 15px">A <em>database</em> is storage plus transactions plus a query engine, sold as one product. People say <em>query engine</em> on its own when the planner and executor are separated from storage and pointed at data they do not own — Trino, Spark SQL, DuckDB over Parquet files. Both are query engines. Only the packaging differs, which is why the phrase can sound like it belongs to analytics alone. It does not.</div>
+    </div>
+  </header>
+
+  <section style="margin-bottom: var(--space-8)">
+    <h2 style="font-size: 34px; margin-bottom: var(--space-2)">First: OLTP and OLAP</h2>
+    <p style="max-width: 44em; margin-bottom: var(--space-6); color: color-mix(in srgb, var(--color-text) 78%, transparent)">Two acronyms come up constantly and the rest of this page leans on them, so here they are before anything else. They name <em>workloads</em>, not products. One engine is tuned for one of them; the same SQL keywords serve both.</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-8); margin-bottom: var(--space-6)">
+      <div>
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 6px">OLTP</div>
+        <h3 style="font-size: 24px; margin: 0 0 var(--space-2)">Online transaction processing</h3>
+        <p style="margin: 0 0 var(--space-2)">The work an application does while people use it. Read one order, insert one payment, update one profile. Thousands of tiny operations a second, each touching a handful of rows, each needing to be correct and durable immediately.</p>
+        <p style="margin: 0; font-size: 14.5px; color: color-mix(in srgb, var(--color-text) 70%, transparent)">Shape of a query: <code>WHERE id = 4471</code>. Success is measured in milliseconds per query and transactions per second. Rows are the natural unit, so storage is row-oriented and indexes matter enormously.</p>
+      </div>
+      <div>
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 6px">OLAP</div>
+        <h3 style="font-size: 24px; margin: 0 0 var(--space-2)">Online analytical processing</h3>
+        <p style="margin: 0 0 var(--space-2)">The work a report or dashboard does. Summarise a year of orders by region. Few queries, each reading enormous numbers of rows but only a few columns of them, and aggregating the result down to something a human reads.</p>
+        <p style="margin: 0; font-size: 14.5px; color: color-mix(in srgb, var(--color-text) 70%, transparent)">Shape of a query: <code>SUM(...) GROUP BY ...</code> over millions of rows. Success is measured in bytes scanned and seconds per query. Columns are the natural unit, so storage is columnar and indexes are usually beside the point.</p>
+      </div>
+    </div>
+    <p style="max-width: 44em; margin: 0; font-size: 14.5px; color: color-mix(in srgb, var(--color-text) 78%, transparent)">The distinction is old and the terms are loose in practice — systems now advertise themselves as “hybrid”, and Postgres will happily run an aggregation while ClickHouse will happily fetch one row. The reason to keep the two words is that they predict the design trade-offs: the same eight stages, resolved differently at each one. Your work sits on the OLAP side. <a href="https://www.postgresql.org/docs/current/index.html" target="_blank">Postgres docs</a> · <a href="https://duckdb.org/why_duckdb" target="_blank">DuckDB on the OLAP case</a></p>
+  </section>
+
+  <section style="margin-bottom: var(--space-8)">
+    <h2 style="font-size: 34px; margin-bottom: var(--space-2)">Concurrency control — how readers and writers avoid blocking each other</h2>
+    <p style="max-width: 44em; margin-bottom: var(--space-3); color: color-mix(in srgb, var(--color-text) 78%, transparent)">Everything above assumed a query runs alone. In production it never does — OLTP engines exist to serve thousands of small transactions a second against the same rows, and the naive fix, making readers wait for writers and vice versa, would strangle the throughput the previous section just promised. Postgres and MySQL both solve this with <strong>MVCC</strong> (multi-version concurrency control): instead of locking a row a reader wants, the engine keeps more than one version of it around and hands each transaction the version that was current when its own snapshot began. A writer creates a new version rather than overwriting the old one in place, so a transaction already in flight keeps seeing a consistent picture — nobody blocks anybody just to read.</p>
+    <p style="max-width: 44em; margin-bottom: var(--space-3)">How much of that consistent picture a transaction gets is a knob: the isolation level. Each step up removes one more way the outside world can leak in mid-transaction.</p>
+    <table class="table" style="width: 100%; font-size: 14px; margin-bottom: var(--space-3)">
+      <thead><tr><th style="width: 20%">Isolation level</th><th style="width: 40%">What it guarantees</th><th style="width: 40%">Default in</th></tr></thead>
+      <tbody>
+        <tr><td>Read Committed</td><td>Every statement gets a fresh snapshot — no dirty reads of uncommitted data, but two statements in the same transaction can see different, both-committed answers</td><td>Postgres</td></tr>
+        <tr><td>Repeatable Read</td><td>The whole transaction shares one snapshot taken at its start — a row read twice returns the same value; Postgres and InnoDB both go further than the SQL standard requires and block phantom rows too</td><td>MySQL / InnoDB</td></tr>
+        <tr><td>Serializable</td><td>The engine detects conflicts between concurrent transactions and aborts one rather than let the result diverge from some serial (one-at-a-time) execution order</td><td>Neither — opt-in on both</td></tr>
+      </tbody>
+    </table>
+    <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)">T1: BEGIN
+T1: SELECT balance FROM accounts WHERE id = 42     → 100   (reads v1, snapshot taken)
+                                                            T2: BEGIN
+                                                            T2: UPDATE accounts SET balance = 80
+                                                                WHERE id = 42     (writes v2, doesn't overwrite v1)
+                                                            T2: COMMIT
+T1: SELECT balance FROM accounts WHERE id = 42     → ?     (same transaction, second look)
+
+  Repeatable Read: → 100   still v1 — T1's snapshot was fixed at BEGIN, T2's commit is invisible to it
+  Read Committed:  → 80    v2 — T1 takes a fresh snapshot per statement, so it now sees T2's commit
+T1: COMMIT</pre>
+    <p style="max-width: 44em; margin-bottom: var(--space-3)">The two databases reach MVCC by different routes, the same split in philosophy the Indexing section found in how they store rows. Postgres keeps every version directly in the table: an <code>UPDATE</code> doesn't rewrite a row in place, it inserts a new tuple stamped with the ID of the transaction that created it and, once superseded, the one that deleted it — a reader's snapshot is just a rule for which stamps it's allowed to see. Nothing is reclaimed automatically; old versions pile up as dead tuples until <code>VACUUM</code> walks the table and frees them, which is why an idle autovacuum or one long-running transaction holding back the oldest visible snapshot is a classic source of Postgres table bloat. InnoDB (MySQL) takes the opposite trade: the table holds only the current version of each row, and older versions are reconstructed on demand from an undo log — a record of how to undo each change. A reader wanting an old version replays undo records backward instead of hunting through the table; cleanup is a background purge thread trimming that log instead of a table-wide sweep.</p>
+    <p style="max-width: 44em; font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent)">Analytical engines mostly opt out of this problem rather than solve it. DuckDB does implement MVCC — it needs to, so a long-running scan isn't corrupted by a concurrent write — but only one writer is active at a time even so, which is a fair trade when the workload is bulk loads rather than thousands of small conflicting writers. ClickHouse's default MergeTree tables go further and skip cross-statement isolation entirely: a single <code>INSERT</code> is atomic, but there's no guarantee across separate statements unless the experimental transactions feature is turned on. Neither gap matters for this page's query — it only reads.</p>
+    <div style="margin-top: var(--space-4); font-size: 13px; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline"><span style="letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Sources</span><a href="https://www.postgresql.org/docs/current/mvcc.html" target="_blank">PostgreSQL: concurrency control (MVCC)</a><a href="https://www.postgresql.org/docs/current/transaction-iso.html" target="_blank">PostgreSQL: transaction isolation levels</a><a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html" target="_blank">MySQL InnoDB multi-versioning</a><a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html" target="_blank">MySQL InnoDB transaction isolation levels</a><a href="https://www.postgresql.org/docs/current/routine-vacuuming.html" target="_blank">PostgreSQL: routine vacuuming</a><a href="https://duckdb.org/docs/current/connect/concurrency.html" target="_blank">DuckDB: concurrency</a><a href="https://clickhouse.com/docs/guides/developer/transactional" target="_blank">ClickHouse: transactional (ACID) support</a></div>
+  </section>
+
+  <section style="margin-bottom: var(--space-8)">
+    <h2 style="font-size: 34px; margin-bottom: var(--space-2)">Four families, one anatomy</h2>
+    <p style="max-width: 44em; margin-bottom: var(--space-4); color: color-mix(in srgb, var(--color-text) 78%, transparent)">These systems are usually discussed as if they were different species. They are not. Each one parses, plans, optimizes and executes. What separates them is two independent things: which workload above they were tuned for, and whether they own their storage.</p>
+    <p style="max-width: 44em; margin-bottom: var(--space-6); font-size: 14.5px; color: color-mix(in srgb, var(--color-text) 70%, transparent)">Those two axes are why there are four families here but only two columns in the table further down. The table compares <em>workload</em>, so families 2, 3 and 4 all sit in its OLAP column — they differ from each other on storage ownership and packaging, not on the decisions the engine makes. Family 1 is the whole OLTP column.</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: var(--space-6) var(--space-8); margin-bottom: var(--space-8)">
+      <div>
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 6px">Transactional · OLTP</div>
+        <div style="font-family: var(--font-heading); font-weight: 600; font-size: 19px; line-height: 1.2; margin-bottom: 6px">Postgres, MySQL, SQLite</div>
+        <div style="font-size: 14.5px">Own their storage. Tuned for many small reads and writes of whole rows, with indexes and transactions. Their engines are row-at-a-time and single-node by default. <strong>This family alone is the OLTP column below.</strong></div>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); font-size: 13px">
+          <a href="https://www.postgresql.org/docs/current/query-path.html" target="_blank">Path of a query</a>
+          <a href="https://dev.mysql.com/doc/refman/8.0/en/optimization.html" target="_blank">MySQL optimization</a>
+          <a href="https://www.sqlite.org/optoverview.html" target="_blank">SQLite optimizer</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 6px">Analytical · OLAP</div>
+        <div style="font-family: var(--font-heading); font-weight: 600; font-size: 19px; line-height: 1.2; margin-bottom: 6px">DuckDB, ClickHouse, Snowflake, BigQuery</div>
+        <div style="font-size: 14.5px">Own their storage too, but tuned for scanning a few columns of very many rows: columnar files, vectorized execution, aggregation-heavy plans. Writes are bulk, not one row at a time.</div>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); font-size: 13px">
+          <a href="https://duckdb.org/why_duckdb" target="_blank">Why DuckDB</a>
+          <a href="https://clickhouse.com/docs" target="_blank">ClickHouse docs</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 6px">Storage-detached</div>
+        <div style="font-family: var(--font-heading); font-weight: 600; font-size: 19px; line-height: 1.2; margin-bottom: 6px">Trino, Spark SQL, Athena</div>
+        <div style="font-size: 14.5px">OLAP engines with no storage of their own. A planner and a distributed executor that read files other systems wrote and split the plan across many workers.</div>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); font-size: 13px">
+          <a href="https://trino.io/docs/current/" target="_blank">Trino docs</a>
+          <a href="https://www.databricks.com/blog/2015/04/13/deep-dive-into-spark-sqls-catalyst-optimizer.html" target="_blank">Spark Catalyst</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: 6px">Embedded and embeddable</div>
+        <div style="font-family: var(--font-heading); font-weight: 600; font-size: 19px; line-height: 1.2; margin-bottom: 6px">Polars, DataFusion, Calcite</div>
+        <div style="font-size: 14.5px">OLAP engines shipped as libraries inside another product. This is the category a BI tool usually builds on, or reimplements: the plan comes from a UI rather than from SQL text.</div>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); font-size: 13px">
+          <a href="https://docs.pola.rs/" target="_blank">Polars</a>
+          <a href="https://calcite.apache.org/" target="_blank">Calcite</a>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="font-size: 24px; margin-bottom: var(--space-2)">The same eight stages, decided differently</h3>
+    <p style="max-width: 44em; margin-bottom: var(--space-3); font-size: 14.5px; color: color-mix(in srgb, var(--color-text) 70%, transparent)">Two columns, by workload. Column two covers families 2, 3 and 4 together — wherever they disagree among themselves, the stage detail below says which.</p>
+    <table class="table" style="width: 100%; font-size: 14px; margin-bottom: var(--space-3)">
+      <thead><tr><th style="width: 24%">Stage</th><th style="width: 38%">Postgres / MySQL (transactional)</th><th style="width: 38%">Analytical and BI engines</th></tr></thead>
+      <tbody>
+        <tr><td>01 Parse and bind</td><td>Same idea: grammar, then name and type resolution</td><td>Same, and often skipped — the plan arrives from a UI or a dataframe API</td></tr>
+        <tr><td>02 Logical plan</td><td>Query tree of relational operators</td><td>Identical concept, frequently the public API (Spark, Polars lazy frames)</td></tr>
+        <tr><td>03 Statistics</td><td><code>ANALYZE</code>, histograms in <code>pg_statistic</code>; MySQL histograms since 8.0</td><td>Statistics live in file footers as well as the catalog</td></tr>
+        <tr><td>04 Optimize</td><td>Cost-based, dynamic programming; Postgres switches to a genetic search past <code>geqo_threshold</code></td><td>Same rewrites, plus pushdown into the storage layer and network cost</td></tr>
+        <tr><td>05 Physical operators</td><td>Index scan, sequential scan, nested-loop / hash / merge join</td><td>Index scans are rare; hash joins and hash aggregates dominate</td></tr>
+        <tr><td>06 Execution model</td><td>Row at a time — cheap for a single-row lookup</td><td>Vectorized batches or compiled code — 10–100× on scans</td></tr>
+        <tr><td>07 Storage</td><td>Row-oriented pages, B-tree indexes</td><td>Columnar files, min/max statistics, projection and predicate pushdown</td></tr>
+        <tr><td>08 Distribution</td><td>Single node unless extended (Citus, Vitess)</td><td>Partitioned and shuffled across workers by design</td></tr>
+      </tbody>
+    </table>
+    <p style="max-width: 44em; font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent)">Read the table as one claim: stages 1 to 5 are shared vocabulary you can carry between any two SQL systems. Stages 6 to 8 are where analytics made different trades, and where the rest of this page spends its time — because that is the part your work touches.</p>
+  </section>
+
+  <section style="margin-bottom: var(--space-8)">
+    <h6 style="color: var(--color-accent-700); margin-bottom: var(--space-3)">The query we will follow all the way down</h6>
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-6); align-items: start">
+      <pre style="font-family: 'Source Code Pro', ui-monospace, monospace; font-size: 14px; line-height: 1.7; margin: 0; padding: var(--space-4); background: var(--color-neutral-100); border-radius: var(--radius-md); overflow-x: auto">SELECT  r.region_name,
+        SUM(s.amount) AS revenue
+FROM    sales s
+JOIN    dim_region r ON r.region_id = s.region_id
+WHERE   s.order_date &gt;= '2026-04-01'
+GROUP BY r.region_name
+ORDER BY revenue DESC;</pre>
+      <div style="display: flex; flex-direction: column; gap: var(--space-4)">
+        <div>
+          <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 55%, transparent)">Before</div>
+          <div style="font-size: 34px; line-height: 1.1; font-family: var(--font-heading)">48.2 s</div>
+          <div style="font-size: 13px; color: color-mix(in srgb, var(--color-text) 65%, transparent)">1.2B rows read, row-oriented files, join in table order</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-2)">After</div>
+          <div style="font-size: 34px; line-height: 1.1; font-family: var(--font-heading); color: var(--color-accent-2)">0.9 s</div>
+          <div style="font-size: 13px; color: color-mix(in srgb, var(--color-text) 65%, transparent)">3 of 41 columns, 4 of 96 partitions, 46M rows scanned</div>
+        </div>
+        <div style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 78%, transparent)">Identical SQL. The engine simply made better decisions. The eight stages below are where each of those decisions lives.</div>
+        <div style="font-size: 13px; padding: var(--space-2) var(--space-3); background: var(--color-accent-2-100); border-radius: var(--radius-md); color: var(--color-accent-2-900)">These two timings are an illustrative composite, not a measurement — a plausible shape for this kind of query, written to make the stages concrete. Treat every number on this page as an order of magnitude, and measure your own with <a href="https://www.postgresql.org/docs/current/using-explain.html" target="_blank">EXPLAIN ANALYZE</a> or your engine's profiler.</div>
+      </div>
+    </div>
+  </section>
+
+  <section style="margin-bottom: var(--space-8)">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); flex-wrap: wrap">
+      <div>
+        <h2 style="font-size: 34px; margin: 0 0 4px">Watch the query travel</h2>
+        <p style="margin: 0; font-size: 15px; color: color-mix(in srgb, var(--color-text) 70%, transparent)">Press play and the same query is rewritten, stage by stage, from text into work. Click any stage to read it in full. Every stage carries a split panel naming what Postgres does and what an analytical engine does, so you can always see which side you are looking at.</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: var(--space-2)">
+        <button class="btn btn-primary" onClick="{{ togglePlay }}" style="min-width: 96px">{{ playLabel }}</button>
+        <button class="btn btn-secondary" onClick="{{ stepBack }}">Back</button>
+        <button class="btn btn-secondary" onClick="{{ stepFwd }}">Step</button>
+        <button class="btn btn-ghost" onClick="{{ reset }}">Reset</button>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: var(--space-6); align-items: start">
+
+      <div style="display: flex; flex-direction: column; gap: 2px" role="tablist">
+        <sc-for list="{{ stages }}" as="st" hint-placeholder-count="8">
+          <button onClick="{{ st.select }}" style="display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: var(--space-2); align-items: start; text-align: left; cursor: pointer; font-family: var(--font-body); border: 0; border-left: 3px solid {{ st.mark }}; background: {{ st.bg }}; opacity: {{ st.op }}; padding: var(--space-2) var(--space-3); transition: background .35s, opacity .35s, border-color .35s" style-hover="background: var(--color-neutral-100)">
+            <span style="font-family: 'Source Code Pro', monospace; font-size: 12px; padding-top: 3px; color: {{ st.numColor }}">{{ st.num }}</span>
+            <span style="display: block; min-width: 0">
+              <span style="display: block; font-family: var(--font-heading); font-weight: 600; font-size: 16px; line-height: 1.25">{{ st.name }}</span>
+              <span style="display: block; font-family: 'Source Code Pro', monospace; font-size: 11.5px; line-height: 1.5; color: color-mix(in srgb, var(--color-text) 60%, transparent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ st.form }}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="min-width: 0; padding-top: var(--space-1)">
+
+        <sc-if value="{{ is1 }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <h6 style="color: var(--color-accent-700)">Stage 01</h6>
+            <h3 style="font-size: 28px; margin-bottom: var(--space-3)">Parsing — text becomes a tree</h3>
+            <p>The engine reads your SQL as characters. A lexer chops it into tokens (<code>SELECT</code>, an identifier, a comma), and a parser arranges those tokens into an abstract syntax tree that mirrors the grammar of the language. Nothing has been validated against your data yet — this stage only decides whether the sentence is well formed.</p>
+            <p>Then comes binding, or analysis: <code>s.amount</code> is resolved to a real column of a real table, <code>SUM</code> to a known aggregate function, and the types are checked. This is where you get "column not found" rather than a wrong answer.</p>
+            <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)">Sort  [revenue DESC]
+└─ Aggregate  [group: r.region_name, agg: SUM(s.amount)]
+   └─ Filter  [s.order_date &gt;= DATE '2026-04-01']
+      └─ Join  [inner, r.region_id = s.region_id]
+         ├─ Table  sales AS s
+         └─ Table  dim_region AS r</pre>
+            <p style="margin-bottom: var(--space-2)"><strong>Where the time goes:</strong> almost nowhere. Parsing a query is microseconds. It matters for a different reason — parsed plans are cacheable. A BI tool that fires the same shape of query thousands of times a minute should parse once and re-bind parameters, not re-parse.</p>
+            <p style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin: 0">In your product: the drag-and-drop UI is effectively a parser already — it builds the tree directly and skips the text. That is why BI engines often have an internal plan representation that SQL is only one entry point to.</p>
+            <div style="margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-neutral-300)">
+              <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: var(--space-2)">Same in both — this stage barely differs</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4) var(--space-6)">
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLTP · Postgres, MySQL</div>
+                  <div style="font-size: 14.5px">Full SQL grammar, then binding against the system catalog. Postgres calls the whole walk <em>the path of a query</em>; parsing is the first step of it.</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLAP · DuckDB, Trino, Spark, BI engines</div>
+                  <div style="font-size: 14.5px">Same parser stage when SQL comes in as text. Often bypassed entirely: Spark and Polars build the plan tree directly from API calls, and a BI tool builds it from what the user dragged onto the canvas.</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top: var(--space-4); font-size: 13px; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline"><span style="letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Sources</span><a href="https://www.postgresql.org/docs/current/query-path.html" target="_blank">PostgreSQL: The Path of a Query</a><a href="https://www.sqlite.org/queryplanner.html" target="_blank">SQLite query planner</a></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ is2 }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <h6 style="color: var(--color-accent-700)">Stage 02</h6>
+            <h3 style="font-size: 28px; margin-bottom: var(--space-3)">The logical plan — what, not how</h3>
+            <p>The tree is rewritten into relational algebra: a small set of operators that each take relations in and return a relation out. Filter (σ), project (π), join (⋈), aggregate (γ), sort (τ). The plan says <em>what</em> result is wanted and says nothing about how to compute it.</p>
+            <p>That separation is the whole trick. Because these operators obey algebraic laws, the engine may rewrite the plan freely as long as the result is provably identical — and a rewritten plan can be thousands of times cheaper.</p>
+            <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)">τ revenue DESC
+ └ γ region_name; SUM(amount)
+    └ σ order_date &gt;= '2026-04-01'
+       └ ⋈ region_id
+          ├ sales
+          └ dim_region</pre>
+            <p style="margin-bottom: var(--space-2)"><strong>The laws that pay:</strong> a filter can move below a join when it only touches one side (filter early, join less). A projection can move down to drop unused columns. Two joins can be reassociated to change their order. An aggregate can sometimes be split into partial and final halves so the partial half runs in parallel.</p>
+            <p style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin: 0">Read a logical plan top-down for meaning, bottom-up for execution: the leaves produce rows, each parent consumes its children.</p>
+            <div style="margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-neutral-300)">
+              <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: var(--space-2)">Same in both — relational algebra is shared ground</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4) var(--space-6)">
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLTP · Postgres, MySQL</div>
+                  <div style="font-size: 14.5px">Called the <em>query tree</em>. Internal to the engine; you see it only indirectly through EXPLAIN.</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLAP · DuckDB, Trino, Spark, BI engines</div>
+                  <div style="font-size: 14.5px">Same operators, but usually a public, inspectable artifact — <code>df.explain()</code> in Spark or Polars prints it, and lazy evaluation exists precisely so the plan can be optimized before anything runs.</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top: var(--space-4); font-size: 13px; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline"><span style="letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Sources</span><a href="https://www.databricks.com/blog/2015/04/13/deep-dive-into-spark-sqls-catalyst-optimizer.html" target="_blank">Spark SQL's Catalyst optimizer</a><a href="https://calcite.apache.org/" target="_blank">Apache Calcite</a></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ is3 }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <h6 style="color: var(--color-accent-700)">Stage 03</h6>
+            <h3 style="font-size: 28px; margin-bottom: var(--space-3)">Statistics and cardinality estimation</h3>
+            <p>Before the engine can choose between plans it has to guess how many rows each step will produce. That guess is cardinality, and it comes from statistics collected about the data: row counts, per-column min and max, number of distinct values, null counts, and histograms of value distribution.</p>
+            <p>Our filter is a date range. With a histogram over <code>order_date</code>, the engine can say: the last quarter is about 4% of the table, so 1.2B rows in gives roughly 46M rows out. That single number decides everything downstream — which join algorithm, which side builds the hash table, how much memory to reserve.</p>
+            <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)"># estimating a range predicate from an equi-depth histogram
+def selectivity(hist, lo):
+    """hist: list of buckets, each holding an equal share of rows."""
+    share = 1.0 / len(hist)
+    hit = 0.0
+    for b in hist:
+        if b.hi &lt; lo:            # bucket entirely below the range
+            continue
+        if b.lo &gt;= lo:           # bucket entirely inside
+            hit += share
+        else:                    # partial: interpolate within the bucket
+            frac = (b.hi - lo) / (b.hi - b.lo)
+            hit += share * frac
+    return hit                   # → 0.041  ≈ 46M of 1.2B rows</pre>
+            <p style="margin-bottom: var(--space-2)"><strong>Where it goes wrong:</strong> estimation errors compound multiplicatively through joins. A 10× underestimate at a leaf becomes a 1000× underestimate three joins up, and the engine then picks a plan sized for thousands of rows while millions arrive. Stale statistics after a big load are one of the most common causes of a query that was fast yesterday.</p>
+            <p style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin: 0">In your product: whenever a client's pipeline rewrites a dataset, statistics must be refreshed with it. If your ingest writes files but not stats, the optimizer is planning blind.</p>
+            <div style="margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-neutral-300)">
+              <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: var(--space-2)">Same idea, different places to keep the numbers</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4) var(--space-6)">
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLTP · Postgres, MySQL</div>
+                  <div style="font-size: 14.5px">Statistics live in the catalog, refreshed by <code>ANALYZE</code> or autovacuum. Postgres keeps histograms and most-common-value lists in <code>pg_statistic</code>; MySQL has had histograms since 8.0.</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLAP · DuckDB, Trino, Spark, BI engines</div>
+                  <div style="font-size: 14.5px">Statistics live in two places: a catalog, and inside the data files themselves — every Parquet row group stores min, max and null counts, so a scan can prune without consulting any catalog at all.</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top: var(--space-4); font-size: 13px; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline"><span style="letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Sources</span><a href="https://www.postgresql.org/docs/current/planner-stats.html" target="_blank">PostgreSQL: statistics used by the planner</a><a href="https://www.postgresql.org/docs/current/row-estimation-examples.html" target="_blank">Row estimation examples</a><a href="https://www.vldb.org/pvldb/vol9/p204-leis.pdf" target="_blank">Leis et al., How Good Are Query Optimizers, Really? (2015)</a></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ is4 }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <h6 style="color: var(--color-accent-700)">Stage 04</h6>
+            <h3 style="font-size: 28px; margin-bottom: var(--space-3)">Optimization — choosing among equivalent plans</h3>
+            <p>The optimizer generates plans that are all logically equivalent, assigns each an estimated cost, and keeps the cheapest. Cost is a made-up unit that models real resources: bytes read, rows processed, hash entries built, bytes shuffled across the network.</p>
+            <p>Rewrites come in two flavours. Rule-based rewrites are always wins and are applied unconditionally — push the date filter below the join, drop the 38 columns nobody selected, collapse a subquery. Cost-based choices need the numbers from stage 3, because they could go either way: which join order, which algorithm, whether to sort or to hash.</p>
+            <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)">plan A  join(sales, dim_region) then filter
+        1.2B rows joined,   cost 41 200
+plan B  filter(sales) then join           ← chosen
+        46M rows joined,    cost    310
+plan C  as B, but build hash on dim_region (18 rows)
+        46M probes, 18-entry table, cost  290  ← chosen</pre>
+            <p style="margin-bottom: var(--space-2)"><strong>Join order and the build side.</strong> A hash join builds an in-memory table from one input and streams the other past it. You always want the small side as the build side: 18 region rows make a hash table that fits in L1 cache, and 46M sales rows stream past it. Get it backwards and you build a 46M-entry table, blow out memory, and spill.</p>
+            <p style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin: 0">Join order is the hardest part of the problem — the number of orderings grows factorially, so engines search a bounded space with dynamic programming and give up on very wide join graphs.</p>
+            <div style="margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-neutral-300)">
+              <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: var(--space-2)">Same algorithms, one extra cost term in OLAP</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4) var(--space-6)">
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLTP · Postgres, MySQL</div>
+                  <div style="font-size: 14.5px">Cost is I/O pages plus CPU tuples, all local. Postgres does dynamic-programming join enumeration and switches to a genetic search past <code>geqo_threshold</code>.</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLAP · DuckDB, Trino, Spark, BI engines</div>
+                  <div style="font-size: 14.5px">Same enumeration, plus two costs Postgres never pays: bytes shuffled across the network, and how much work can be pushed <em>down into the storage layer</em> so the engine never reads it.</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top: var(--space-4); font-size: 13px; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline"><span style="letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Sources</span><a href="https://www.postgresql.org/docs/current/planner-optimizer.html" target="_blank">PostgreSQL: Planner/Optimizer</a><a href="https://dl.acm.org/doi/10.1145/582095.582099" target="_blank">Selinger et al., Access Path Selection (1979)</a><a href="https://www.vldb.org/pvldb/vol9/p204-leis.pdf" target="_blank">Join Order Benchmark</a></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ is5 }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <h6 style="color: var(--color-accent-700)">Stage 05</h6>
+            <h3 style="font-size: 28px; margin-bottom: var(--space-3)">Physical operators — the actual machinery</h3>
+            <p>Each logical operator is replaced by a concrete algorithm with concrete memory behaviour. This is the plan that runs.</p>
+            <div class="table" style="margin-bottom: var(--space-3)">
+              <table class="table" style="width: 100%; font-size: 14px">
+                <thead><tr><th>Logical</th><th>Physical choice</th><th>Cost shape</th></tr></thead>
+                <tbody>
+                  <tr><td>Scan</td><td>Full scan / partition-pruned scan / index lookup</td><td>bytes read</td></tr>
+                  <tr><td>Join</td><td>Hash join, sort-merge join, nested loop, broadcast</td><td>memory for the build side</td></tr>
+                  <tr><td>Aggregate</td><td>Hash aggregate, streaming aggregate on sorted input</td><td>memory ∝ group count</td></tr>
+                  <tr><td>Sort</td><td>In-memory quicksort, external merge sort</td><td>spills when it exceeds budget</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)">Sort            [revenue DESC]                        18 rows
+└ HashAggregate [key region_name, SUM(amount)]        18 groups
+  └ HashJoin    [build: dim_region (18), probe: sales] 46M rows
+    ├ Scan dim_region  cols: region_id, region_name
+    └ Scan sales       cols: region_id, amount, order_date
+                       filter pushed: order_date &gt;= '2026-04-01'</pre>
+            <p style="margin-bottom: var(--space-2)"><strong>Spilling to disk.</strong> Every blocking operator — hash build, sort, hash aggregate — has a memory budget. Exceed it and the operator must spill partitions to disk and read them back, which typically costs an order of magnitude. Spills show up in query profiles as a sudden jump in one operator's time with low CPU: it is waiting on I/O.</p>
+            <p style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin: 0">Note that the aggregate here holds only 18 groups. Group cardinality, not input size, sets an aggregate's memory. <code>GROUP BY customer_id</code> over millions of customers is a different machine entirely.</p>
+            <div style="margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-neutral-300)">
+              <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: var(--space-2)">Diverges — the operator mix is genuinely different</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4) var(--space-6)">
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLTP · Postgres, MySQL</div>
+                  <div style="font-size: 14.5px">An index scan is the workhorse: find the few rows by B-tree lookup (the Indexing section further down goes deeper on what a B-tree lookup actually does). Nested-loop joins are common and correct when one side is tiny after an index lookup.</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLAP · DuckDB, Trino, Spark, BI engines</div>
+                  <div style="font-size: 14.5px">Index scans are rare — when you read 4% of a billion rows, a full pruned scan beats a billion index probes. Hash joins and hash aggregates dominate, and every blocking operator has a memory budget it can spill past.</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top: var(--space-4); font-size: 13px; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline"><span style="letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Sources</span><a href="https://www.postgresql.org/docs/current/using-explain.html" target="_blank">PostgreSQL: using EXPLAIN</a><a href="https://dev.mysql.com/doc/refman/8.0/en/explain.html" target="_blank">MySQL EXPLAIN</a><a href="https://15445.courses.cs.cmu.edu/" target="_blank">CMU 15-445 lectures</a></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ is6 }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <h6 style="color: var(--color-accent-700)">Stage 06</h6>
+            <h3 style="font-size: 28px; margin-bottom: var(--space-3)">Execution model — one row or a batch at a time</h3>
+            <p>The classic design is the Volcano or iterator model: every operator exposes <code>next()</code>, and the root pulls one row, which pulls one row from its child, and so on down the tree. It is elegant and uses almost no memory. It is also slow, because each row costs several virtual function calls and the CPU never gets to do the same thing twice in a row.</p>
+            <p>Modern analytical engines are vectorized: <code>next()</code> returns a batch of a few thousand values per column instead of a single row. The per-call overhead is amortised across the batch, the inner loop is a tight pass over a contiguous array, and the CPU can use SIMD instructions to add sixteen numbers at once.</p>
+            <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)">// row-at-a-time: one dynamic dispatch per row
+while let Some(row) = child.next_row() {      // ~1.2B calls
+    if row.order_date &gt;= cutoff { sink.push(row) }
+}
+
+// vectorized: one dispatch per 2048-value batch
+while let Some(batch) = child.next_batch() {  // ~600K calls
+    let dates: &amp;[i32] = batch.column(2).values();
+    let mask: Vec&lt;bool&gt; =
+        dates.iter().map(|d| *d &gt;= cutoff).collect();  // auto-vectorized
+    sink.push(batch.filter(&amp;mask));
+}</pre>
+            <p style="margin-bottom: var(--space-2)"><strong>Rule of thumb:</strong> vectorized execution buys 10–100× on analytical scans and aggregations. It buys nothing on a single-row lookup, which is why transactional databases kept the row model. Batch size is a tuning knob — big enough to amortise dispatch, small enough that a batch's columns stay in CPU cache. A few thousand is the usual sweet spot.</p>
+            <p style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin: 0">Compiled execution is the third option: generate machine code for this specific query. Faster still, at the cost of compile latency — a poor trade for short interactive queries.</p>
+            <div style="margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-neutral-300)">
+              <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: var(--space-2)">Diverges sharply — this is the big one</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4) var(--space-6)">
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLTP · Postgres, MySQL</div>
+                  <div style="font-size: 14.5px">Row at a time, the original Volcano model. Correct choice for their workload: fetching one row should not pay to fill a batch.</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLAP · DuckDB, Trino, Spark, BI engines</div>
+                  <div style="font-size: 14.5px">Vectorized batches of a few thousand values per column, or generated machine code. This is where most of the 10–100× analytical advantage comes from.</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top: var(--space-4); font-size: 13px; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline"><span style="letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Sources</span><a href="http://cidrdb.org/cidr2005/papers/P19.pdf" target="_blank">Boncz, Zukowski, Nes — MonetDB/X100 (CIDR 2005)</a><a href="https://15721.courses.cs.cmu.edu/" target="_blank">CMU 15-721 Advanced Database Systems</a></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ is7 }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <h6 style="color: var(--color-accent-700)">Stage 07</h6>
+            <h3 style="font-size: 28px; margin-bottom: var(--space-3)">Columnar storage and pushdown</h3>
+            <p>Row storage keeps a whole record together, which is right when you fetch one record. Column storage keeps each column's values together, which is right when you scan one column of every record. Analytics is always the second case — and our query touches 3 of the 41 columns in <code>sales</code>.</p>
+            <p>Three separate wins stack up. <em>Projection pushdown:</em> the engine reads only the three columns, not 93% of the bytes it would otherwise. <em>Compression:</em> a column holds one type and often few distinct values, so dictionary and run-length encoding shrink it several-fold, and the engine can even filter on the compressed codes. <em>Predicate pushdown with min/max statistics:</em> each file and row group records the range of each column, so the scan skips whole chunks whose <code>order_date</code> range cannot match.</p>
+            <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)">file: sales/2026-Q1/part-07.parquet
+  row group 0  order_date [2026-01-01 .. 2026-01-14]  → skip
+  row group 1  order_date [2026-01-14 .. 2026-01-29]  → skip
+  ...
+file: sales/2026-Q2/part-01.parquet
+  row group 0  order_date [2026-04-01 .. 2026-04-16]  → read
+                columns read: region_id, amount, order_date  (3 of 41)
+
+scanned  46M of 1.2B rows   ·   1.4 GB of 210 GB</pre>
+            <p style="margin-bottom: var(--space-2)"><strong>Late materialization</strong> is the fourth win and the subtlest. Rather than reconstructing full rows and then filtering them, the engine evaluates the filter against one column, produces a selection vector of positions that survived, and fetches the other columns only for those positions. Rows are assembled as late as possible — sometimes never, if the query only aggregates.</p>
+            <p style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin: 0">In your product: your columnar file layer is where most of the achievable speed lives. How data is partitioned and sorted on write determines how much a scan can skip on read — an unsorted column has useless min/max ranges, because every chunk's range covers everything.</p>
+            <div style="margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-neutral-300)">
+              <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: var(--space-2)">Diverges — storage layout is the root of the split</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4) var(--space-6)">
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLTP · Postgres, MySQL</div>
+                  <div style="font-size: 14.5px">Row-oriented pages, so a whole record is one contiguous read, plus B-tree indexes to find it. Reading three columns still pulls all forty-one off disk.</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLAP · DuckDB, Trino, Spark, BI engines</div>
+                  <div style="font-size: 14.5px">Columnar files. Projection pushdown reads only the columns asked for, min/max statistics skip whole chunks, compression works because a column is one type, and late materialization delays assembling rows for as long as possible.</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top: var(--space-4); font-size: 13px; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline"><span style="letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Sources</span><a href="https://parquet.apache.org/docs/file-format/" target="_blank">Parquet file format</a><a href="https://arrow.apache.org/docs/format/Columnar.html" target="_blank">Arrow columnar format</a><a href="https://duckdb.org/why_duckdb" target="_blank">DuckDB design goals</a></div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ is8 }}" hint-placeholder-val="{{ true }}">
+          <div>
+            <h6 style="color: var(--color-accent-700)">Stage 08</h6>
+            <h3 style="font-size: 28px; margin-bottom: var(--space-3)">Distributed execution</h3>
+            <p>When the data does not fit on one machine, the plan is cut into stages at every point where rows must move between workers. Within a stage, each worker runs the same operator pipeline over its own partition, fully in parallel. Between stages, rows are redistributed — a shuffle — and that is the expensive part, because it means serializing data and sending it over a network.</p>
+            <p>Our query needs one shuffle at most, and with a small dimension table it needs none: <code>dim_region</code> is broadcast to every worker, each worker joins and aggregates its own slice of <code>sales</code> locally, and only 18 partial groups per worker travel to the final aggregate.</p>
+            <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)">stage 1  ×8 workers, one per partition group
+         Scan sales (pruned) → HashJoin(broadcast dim_region)
+                             → partial HashAggregate
+         emits 18 partial groups per worker        ~2 KB total
+
+stage 2  ×1
+         final HashAggregate → Sort → result       18 rows</pre>
+            <p style="margin-bottom: var(--space-2)"><strong>Partial aggregation before the shuffle</strong> is the single most valuable distributed trick: aggregate locally first so you ship 144 rows instead of 46 million. <strong>Skew</strong> is the usual failure — if one partition holds 40% of the rows, seven workers finish and one runs for minutes, and the stage is as slow as its slowest task.</p>
+            <p style="font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin: 0">Partition on a column with even distribution and high cardinality, and prune on a column you filter by. Those are often not the same column, which is the real design tension.</p>
+            <div style="margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-neutral-300)">
+              <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: var(--space-2)">Diverges — one family does not do this at all</div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4) var(--space-6)">
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLTP · Postgres, MySQL</div>
+                  <div style="font-size: 14.5px">Single node. Postgres and MySQL scale out only through extensions built on top of them, such as Citus or Vitess, and the core planner is unaware of it.</div>
+                </div>
+                <div>
+                  <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLAP · DuckDB, Trino, Spark, BI engines</div>
+                  <div style="font-size: 14.5px">Built in for families 3 and 4 (Trino, Spark, BigQuery): the plan is cut into stages at every shuffle. DuckDB and Polars, family 2, are deliberately single-node and use every core of one machine instead.</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top: var(--space-4); font-size: 13px; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline"><span style="letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Sources</span><a href="https://trino.io/docs/current/" target="_blank">Trino documentation</a><a href="https://www.databricks.com/blog/2015/04/13/deep-dive-into-spark-sqls-catalyst-optimizer.html" target="_blank">Spark Catalyst</a></div>
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </section>
+
+  <section style="margin-bottom: var(--space-8)">
+    <h2 style="font-size: 34px; margin-bottom: var(--space-2)">Indexing — finding rows without scanning them</h2>
+    <p style="max-width: 44em; margin-bottom: var(--space-6); color: color-mix(in srgb, var(--color-text) 78%, transparent)">The walkthrough above named an index twice without stopping to explain it: Stage 05 picked an index scan as a physical operator, and Stage 07 called B-tree indexes part of Postgres and MySQL's storage layer. This section is what's underneath both mentions.</p>
+    <p style="max-width: 44em; margin-bottom: var(--space-3)">An index is a second copy of a column, or a few columns, kept in sorted order with a pointer back to the full row — so the engine can find a match without reading every row on disk. The default shape in both Postgres and MySQL is a B-tree: a balanced structure where every leaf sits at the same depth. It stays only a handful of levels deep even over billions of rows, because each node is a full disk page holding hundreds of keys — the tree is wide, not small, and that's what keeps a lookup cheap.</p>
+    <p style="max-width: 44em; margin-bottom: var(--space-3)">Where the index points matters as much as its shape. InnoDB (MySQL) clusters the table around its primary key: the leaf level of the primary key's B-tree <em>is</em> the row, so a primary-key lookup needs one structure and nothing else. Every other index on that table is a secondary index — it stores the indexed columns plus the primary key, and fetching anything beyond that requires a second trip back into the clustered index. Postgres has no clustered index by default: every index, primary key included, is a separate structure pointing at a heap tuple, so even a primary-key lookup touches two structures. Either way, every index is rewritten on every INSERT, UPDATE and DELETE that touches its columns — an index is a standing trade of write cost and disk space for read speed, to be used sensibly, not applied to every column.</p>
+    <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)">idx_sales_order_date   B-tree, 3 levels, 1.2B entries
+
+  root     [ 2025-04-01 | 2025-10-01 | 2026-04-01 | 2026-10-01 ]
+                                        │
+  branch                  [ 2026-01-01 | 2026-02-15 | 2026-04-01 | 2026-05-30 ]
+                                                          │
+  leaf     …  2026-03-31→tid(881,4)  2026-04-01→tid(881,5)  2026-04-01→tid(902,1)  …
+                                       └── sibling pointer: keep scanning right ──→
+
+  46M matching leaf entries — each one a candidate heap fetch,
+  unless the index already carries every column the query needs</pre>
+    <p style="max-width: 44em; margin-bottom: var(--space-2)"><strong>The one index that changes the arithmetic: index-only scans.</strong> If the index carries every column a query needs — in Postgres, using <code>INCLUDE</code> to add non-key payload columns — the engine can answer straight from the index and skip the row fetch entirely, checking a small visibility map instead of the heap. The visibility map is roughly four orders of magnitude smaller than the heap it describes, so that swap turns 46M random heap reads into 46M sequential index reads — the difference between an index paying for itself and an index making things worse.</p>
+    <p style="max-width: 44em; font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent); margin-bottom: var(--space-4)">None of this fires for the query on this page. Stage 05 already noted that an index scan is rare once a filter matches 4% of the table — indexes earn their keep on selective point lookups like <code>WHERE id = 4471</code>, the OLTP shape from the very first section of this page, not this OLAP one. Stage 07 is where this query's actual speed comes from instead.</p>
+    <p style="max-width: 44em; margin-bottom: var(--space-3)">The clearest way to see why the two families end up so far apart is to compare two indexes by their <em>granularity</em> — how many rows a single entry covers — rather than by which product ships them. A B-tree, the OLTP default, is a phone book: every name gets its own line, kept in sorted order, so "Nguyen, Thi" is one lookup away no matter how many million names came before it — one entry, one row. A sparse index, the OLAP alternative, works more like the thumb-tabs cut into the side of a large dictionary: there's no tab for every word, just one every few hundred pages. A tab doesn't take you to the word, it takes you to roughly the right neighborhood, and everything inside that neighborhood — a whole block of pages — gets read or skipped together. ClickHouse's MergeTree keeps exactly that: about 146,484 tabs for this page's 1.2-billion-row table, one per 8,192-row granule, each one describing a range of values instead of a single row.</p>
+    <pre style="font-family: 'Source Code Pro', monospace; font-size: 13px; line-height: 1.65; white-space: pre; overflow-x: auto; background: var(--color-neutral-100); padding: var(--space-3); border-radius: var(--radius-md); margin: 0 0 var(--space-3)">DENSE — "phone book"  (B-tree, OLTP)          SPARSE — "dictionary thumb-tabs"  (OLAP)
+one entry per row                              one entry per 8,192-row granule
+
+Aab, J.      → row 40,441,880                  granule 0   rows       1 –    8,192   skip
+Aabel, T.    → row 40,441,881                  granule 1   rows   8,193 –   16,384   skip
+Aachen, K.   → row 40,441,882                  ...
+...                                            granule 14  rows 114,689 –  122,880   READ  (order_date overlaps filter)
+Zywiec, M.   → row 68,220,014                  granule 15  rows 122,881 –  131,072   skip
+                                                ...
+
+1.2B entries — one per row                     146,484 entries — one per granule (~8,192× fewer)
+find one name: descend the tree, a few hops    find one range: binary-search the tabs, then scan the granule</pre>
+    <div style="padding-top: var(--space-3); border-top: 1px solid var(--color-neutral-300)">
+      <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-accent-700); margin-bottom: var(--space-2)">Diverges — one side barely needs this</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4) var(--space-6)">
+        <div>
+          <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLTP · Postgres, MySQL</div>
+          <div style="font-size: 14.5px">The phone-book shape, above, is the default and does most of the work. Postgres also ships Hash, GiST, SP-GiST, GIN and BRIN for shapes a B-tree can't cover: equality-only lookups, geometric and nearest-neighbor search, arrays and full text, and correlated ranges. MySQL/InnoDB clusters storage around the primary key; Postgres keeps every index, including the primary key's, separate from the heap.</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 50%, transparent); margin-bottom: 4px">OLAP · DuckDB, Trino, Spark, BI engines</div>
+          <div style="font-size: 14.5px">Per-row indexes are largely absent, because these queries already read a large share of the table, well past the point a phone-book-shaped structure pays for itself. What replaces it is the thumb-tab shape: ClickHouse's MergeTree keeps a sparse primary index with one entry per granule instead of per row, small enough to sit entirely in memory even over a billion rows, so a binary search over it decides which granules to skip — the same pruning idea as Stage 07's Parquet row-group statistics, just a first-class sorted structure instead of incidental file metadata.</div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top: var(--space-4); font-size: 13px; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); align-items: baseline"><span style="letter-spacing: 0.08em; text-transform: uppercase; color: color-mix(in srgb, var(--color-text) 45%, transparent)">Sources</span><a href="https://www.postgresql.org/docs/current/indexes-types.html" target="_blank">PostgreSQL: index types</a><a href="https://www.postgresql.org/docs/current/indexes-index-only-scans.html" target="_blank">PostgreSQL: index-only scans</a><a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html" target="_blank">MySQL InnoDB index types</a><a href="https://use-the-index-luke.com/sql/anatomy/the-tree" target="_blank">Use The Index, Luke: the tree</a><a href="https://www.postgresql.org/docs/current/indexes.html" target="_blank">PostgreSQL: indexes</a><a href="https://clickhouse.com/docs/guides/best-practices/sparse-primary-indexes" target="_blank">ClickHouse sparse primary indexes</a></div>
+  </section>
+
+  <sc-if value="{{ showRedFlags }}" hint-placeholder-val="{{ true }}">
+    <section>
+      <h2 style="font-size: 34px; margin-bottom: var(--space-2)">Red flags in a query profile</h2>
+      <p style="max-width: 40em; margin-bottom: var(--space-6); color: color-mix(in srgb, var(--color-text) 75%, transparent)">What to look for when a query is slow, and which stage above to reread.</p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4)">
+        <div class="card elev-sm">
+          <div class="card-kicker">Stage 03</div>
+          <div class="card-title">Estimated rows and actual rows differ by 100×</div>
+          <div class="card-body" style="font-size: 14px">Statistics are stale or the predicate is one the estimator cannot reason about. Every plan choice downstream was made on a bad number. Refresh stats first, before touching the query.</div>
+        </div>
+        <div class="card elev-sm">
+          <div class="card-kicker">Stage 07</div>
+          <div class="card-title">Bytes scanned is close to the whole table</div>
+          <div class="card-body" style="font-size: 14px">Nothing was pruned. Either the filter is not on the partitioning or sort column, or it is wrapped in a function the engine cannot push down — <code>WHERE YEAR(order_date) = 2026</code> defeats a min/max skip that <code>order_date &gt;= '2026-01-01'</code> would use.</div>
+        </div>
+        <div class="card elev-sm">
+          <div class="card-kicker">Stage 04</div>
+          <div class="card-title">The big table is the hash build side</div>
+          <div class="card-body" style="font-size: 14px">The optimizer thought it was small. Expect memory pressure and a spill. Usually a cardinality problem rather than a join problem.</div>
+        </div>
+        <div class="card elev-sm">
+          <div class="card-kicker">Stage 05</div>
+          <div class="card-title">One operator dominates the time at low CPU</div>
+          <div class="card-body" style="font-size: 14px">It is spilling, or waiting on I/O. Look at the sort, the hash build, or the aggregate's group count before blaming the scan.</div>
+        </div>
+        <div class="card elev-sm">
+          <div class="card-kicker">Stage 08</div>
+          <div class="card-title">One task runs long after the others finish</div>
+          <div class="card-body" style="font-size: 14px">Partition skew. The stage costs what its slowest task costs, so adding workers changes nothing until the data is redistributed.</div>
+        </div>
+        <div class="card elev-sm">
+          <div class="card-kicker">Stage 02</div>
+          <div class="card-title">SELECT * behind a dashboard tile</div>
+          <div class="card-body" style="font-size: 14px">Projection pushdown has nothing to remove, so a columnar layout gives up its main advantage. Ask for the columns the chart actually draws.</div>
+        </div>
+      </div>
+    </section>
+  </sc-if>
+
+  <section style="margin-top: var(--space-8)">
+    <h2 style="font-size: 34px; margin-bottom: var(--space-2)">Sources</h2>
+    <p style="max-width: 44em; margin-bottom: var(--space-6); color: color-mix(in srgb, var(--color-text) 78%, transparent)">Don't take this page's word for anything. These are the primary sources it was written from: vendor documentation for how a specific engine behaves, and papers for why the designs are what they are. Links checked August 2026; some papers sit behind a publisher paywall, in which case the title is searchable for an open copy.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-6) var(--space-8)">
+      <div>
+        <h6 style="color: var(--color-accent-700); margin-bottom: var(--space-3)">Start here if you read one thing</h6>
+        <div style="display: flex; flex-direction: column; gap: var(--space-3); font-size: 14.5px">
+          <div><a href="https://www.postgresql.org/docs/current/query-path.html" target="_blank">PostgreSQL — Overview of Internals, Chapter 51</a><div style="color: color-mix(in srgb, var(--color-text) 65%, transparent)">Eight short pages that walk one query from connection to result. The clearest free description of a real engine's structure, and the source for stages 1, 2 and 4 here.</div></div>
+          <div><a href="https://15445.courses.cs.cmu.edu/" target="_blank">CMU 15-445 — Database Systems</a><div style="color: color-mix(in srgb, var(--color-text) 65%, transparent)">Full lecture videos and slides. Andy Pavlo teaches the whole engine from storage to execution; 15-721 is the analytics-focused sequel.</div></div>
+          <div><a href="https://www.nowpublishers.com/article/Details/DBS-002" target="_blank">Hellerstein, Stonebraker, Hamilton — Architecture of a Database System (2007)</a><div style="color: color-mix(in srgb, var(--color-text) 65%, transparent)">The canonical survey of how the pieces fit together, including query processor and optimizer architecture. Searchable as a free PDF.</div></div>
+        </div>
+      </div>
+
+      <div>
+        <h6 style="color: var(--color-accent-700); margin-bottom: var(--space-3)">Engine documentation</h6>
+        <div style="display: flex; flex-direction: column; gap: var(--space-2); font-size: 14.5px">
+          <a href="https://www.postgresql.org/docs/current/planner-optimizer.html" target="_blank">PostgreSQL — Planner/Optimizer</a>
+          <a href="https://www.postgresql.org/docs/current/using-explain.html" target="_blank">PostgreSQL — Using EXPLAIN</a>
+          <a href="https://www.postgresql.org/docs/current/planner-stats.html" target="_blank">PostgreSQL — Statistics used by the planner</a>
+          <a href="https://dev.mysql.com/doc/refman/8.0/en/optimization.html" target="_blank">MySQL — Optimization</a>
+          <a href="https://dev.mysql.com/doc/refman/8.0/en/explain.html" target="_blank">MySQL — EXPLAIN output</a>
+          <a href="https://www.sqlite.org/optoverview.html" target="_blank">SQLite — Query optimizer overview</a>
+          <a href="https://duckdb.org/why_duckdb" target="_blank">DuckDB — Why DuckDB</a>
+          <a href="https://trino.io/docs/current/" target="_blank">Trino — Documentation</a>
+          <a href="https://docs.pola.rs/" target="_blank">Polars — User guide (lazy execution)</a>
+          <a href="https://calcite.apache.org/" target="_blank">Apache Calcite — planner framework</a>
+        </div>
+      </div>
+
+      <div>
+        <h6 style="color: var(--color-accent-700); margin-bottom: var(--space-3)">Formats and columnar storage</h6>
+        <div style="display: flex; flex-direction: column; gap: var(--space-2); font-size: 14.5px; margin-bottom: var(--space-6)">
+          <a href="https://parquet.apache.org/docs/file-format/" target="_blank">Apache Parquet — file format</a>
+          <a href="https://arrow.apache.org/docs/format/Columnar.html" target="_blank">Apache Arrow — columnar format specification</a>
+        </div>
+        <h6 style="color: var(--color-accent-700); margin-bottom: var(--space-3)">Papers</h6>
+        <div style="display: flex; flex-direction: column; gap: var(--space-3); font-size: 14.5px">
+          <div><a href="http://cidrdb.org/cidr2005/papers/P19.pdf" target="_blank">Boncz, Zukowski, Nes — MonetDB/X100: Hyper-Pipelining Query Execution (CIDR 2005)</a><div style="color: color-mix(in srgb, var(--color-text) 65%, transparent)">Where vectorized execution was introduced, and the source for the claim in stage 6 that batching buys one to two orders of magnitude.</div></div>
+          <div><a href="https://www.vldb.org/pvldb/vol9/p204-leis.pdf" target="_blank">Leis et al. — How Good Are Query Optimizers, Really? (VLDB 2015)</a><div style="color: color-mix(in srgb, var(--color-text) 65%, transparent)">Measures real optimizers and finds cardinality estimation errors, not cost models, are what ruins plans. The evidence behind stage 3.</div></div>
+          <div><a href="https://dl.acm.org/doi/10.1145/582095.582099" target="_blank">Selinger et al. — Access Path Selection in a Relational DBMS (SIGMOD 1979)</a><div style="color: color-mix(in srgb, var(--color-text) 65%, transparent)">The original cost-based optimizer. Every engine in the table above is a descendant of this design.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <p style="max-width: 44em; margin-top: var(--space-8); font-size: 14px; color: color-mix(in srgb, var(--color-text) 70%, transparent)">Where this page states a number without a citation — the 48 seconds, the 46 million rows, the cost figures — it is an illustration written to make a mechanism legible, not a measurement. The mechanisms are sourced; the numbers are mine.</p>
+  </section>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;playbackMs&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:2600,&quot;min&quot;:800,&quot;max&quot;:6000,&quot;step&quot;:200,&quot;unit&quot;:&quot;ms&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Animation&quot;},&quot;showRedFlags&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sections&quot;}}">
+const STAGES = [
+  { num: "01", name: "Parse and bind",        form: "SELECT r.region_name, SUM(s.amount)…" },
+  { num: "02", name: "Logical plan",          form: "τ ← γ ← σ ← ⋈ (sales, dim_region)" },
+  { num: "03", name: "Statistics",            form: "sales 1.2B rows · date filter ≈ 4%" },
+  { num: "04", name: "Optimize",              form: "pushdown + reorder → cost 290" },
+  { num: "05", name: "Physical operators",    form: "HashJoin build=dim_region (18)" },
+  { num: "06", name: "Execution model",       form: "next() → batch[2048] columns" },
+  { num: "07", name: "Columnar and pushdown", form: "read 3 of 41 cols · skip 92% rows" },
+  { num: "08", name: "Distributed execution", form: "8 partitions → 2 KB shuffle" }
+];
+
+class Component extends DCLogic {
+  state = { step: 0, playing: false };
+
+  componentWillUnmount() { clearTimeout(this.t); }
+
+  schedule() {
+    clearTimeout(this.t);
+    if (!this.state.playing) return;
+    const ms = this.props.playbackMs ?? 2600;
+    this.t = setTimeout(() => {
+      const next = this.state.step + 1;
+      if (next >= STAGES.length) this.setState({ step: STAGES.length - 1, playing: false });
+      else this.setState({ step: next }, () => this.schedule());
+    }, ms);
+  }
+
+  set(step, playing) {
+    clearTimeout(this.t);
+    this.setState({ step, playing }, () => this.schedule());
+  }
+
+  renderVals() {
+    const step = this.state.step;
+    const stages = STAGES.map((s, i) => {
+      const active = i === step;
+      const reached = i <= step;
+      return {
+        ...s,
+        select: () => this.set(i, false),
+        bg: active ? "var(--color-accent-100)" : "transparent",
+        mark: active ? "var(--color-accent)" : "transparent",
+        op: active ? 1 : reached ? 0.82 : 0.4,
+        numColor: active ? "var(--color-accent-700)" : "color-mix(in srgb, var(--color-text) 45%, transparent)"
+      };
+    });
+    return {
+      stages,
+      playLabel: this.state.playing ? "Pause" : step >= STAGES.length - 1 ? "Replay" : "Play",
+      togglePlay: () => {
+        if (this.state.playing) this.set(step, false);
+        else this.set(step >= STAGES.length - 1 ? 0 : step, true);
+      },
+      stepFwd: () => this.set(Math.min(step + 1, STAGES.length - 1), false),
+      stepBack: () => this.set(Math.max(step - 1, 0), false),
+      reset: () => this.set(0, false),
+      showRedFlags: this.props.showRedFlags ?? true,
+      is1: step === 0, is2: step === 1, is3: step === 2, is4: step === 3,
+      is5: step === 4, is6: step === 5, is7: step === 6, is8: step === 7
+    };
+  }
+}
+
+</script>
+</body>
+</html>
