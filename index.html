@@ -23,9 +23,9 @@
 
 <div style="max-width: 1080px; margin: 0 auto; padding: var(--space-8) var(--space-6) 120px; font-family: var(--font-body); font-size: 16px; line-height: 1.6">
 
-  <header style="display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); padding-bottom: var(--space-2); border-bottom: 3px solid var(--color-text)">
+  <header style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); padding-bottom: var(--space-2); border-bottom: 3px solid var(--color-text)">
     <div style="font-family: var(--font-heading); font-weight: 600; font-size: 20px">Muhammad Restu Utomo</div>
-    <nav style="display: flex; gap: var(--space-4); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase">
+    <nav style="display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase">
       <a href="#experience">Experience</a>
       <a href="#learning">Learning notes</a>
       <a href="#contact">Contact</a>
@@ -33,8 +33,8 @@
   </header>
   <div style="height: 1px; background: var(--color-text); margin-top: 3px; margin-bottom: var(--space-8)"></div>
 
-  <section style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr); gap: var(--space-8); align-items: end; margin-bottom: var(--space-8)">
-    <h1 style="font-size: 60px; line-height: 1.05; margin: 0">Backend engineer,<br>writing down how systems<br>actually work.</h1>
+  <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-8); align-items: start; margin-bottom: var(--space-8)">
+    <h1 style="font-size: clamp(34px, 6vw, 60px); line-height: 1.05; margin: 0">Backend engineer, writing down how systems actually work.</h1>
     <p style="margin: 0; color: color-mix(in srgb, var(--color-text) 75%, transparent)">Currently a Backend Engineer at Paques, based in Jakarta, Indonesia. This site doubles as a portfolio and a personal engineering library — one deep-dive topic at a time.</p>
   </section>
 
