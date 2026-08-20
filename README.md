@@ -9,7 +9,7 @@ The site has two parts:
 
 ## Built with
 
-The site is plain HTML/CSS/JS — no build step, no framework, no bundler. Pages are `.dc.html` ("Design Canvas") documents, a lightweight templating format (loop/conditional tags, data bindings) rendered client-side by a small runtime (`support.js`). The look and feel comes from **Broadsheet**, a shared newsprint-styled design system (`_ds/`) used across every page: Source Serif 4 type, a paper-white ground, and cyan/magenta as the two spot colors.
+The site is plain HTML/CSS/JS — no build step, no framework, no bundler. Pages are **Design Canvas** documents under the hood, a lightweight templating format (loop/conditional tags, data bindings) rendered client-side by a small runtime (`support.js`). The look and feel comes from **Broadsheet**, a shared newsprint-styled design system (`_ds/`) used across every page: Source Serif 4 type, a paper-white ground, and cyan/magenta as the two spot colors.
 
 ## Running it locally
 
@@ -21,7 +21,7 @@ python3 -m http.server 8787
 
 Then open:
 - `http://localhost:8787/index.html` — the portfolio
-- `http://localhost:8787/learning/Library.dc.html` — the Engineering Notes index
+- `http://localhost:8787/learning/library/` — the Engineering Notes index
 
 ## Project structure
 
@@ -30,7 +30,7 @@ index.html          Portfolio / about-me page (the site's entry point).
 learning/            Engineering Notes — the topic library and each topic page.
 certificates/        Certificate files linked from the portfolio's Certifications section.
 _ds/                 Broadsheet, the shared design system (styles, tokens, docs).
-support.js           The runtime that renders the .dc.html pages.
+support.js           The runtime that renders the Design Canvas pages.
 ```
 
 ## Content sourcing

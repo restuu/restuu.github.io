@@ -28,28 +28,38 @@ _ds/broadsheet-.../      The "Broadsheet" design system, shared by every page on
   _ds_bundle.js            Compiled system JS (inlines print-plates.js — the CMYK plate SVG filters).
   readme.md                How to use the system: tokens, components, do/don't. Read before styling.
 learning/                The learning platform, one level down from the site root.
-  Library.dc.html          Topic index. Links back to ../index.html.
-  Query Engine.dc.html     Topic 01. Links back to Library.dc.html.
+  library/index.html       Topic index. Links back to ../../index.html.
+  query-engine/index.html  Topic 01. Links back to ../library/.
 certificates/             PDF certificates linked from index.html's Certifications section.
 ```
 
-`learning/*.dc.html` reference `../support.js` and `../_ds/...` — one level up from
-where the learning-platform pages used to sit as repo-root files. If you copy a page
-in or out of `learning/`, fix those relative paths.
+Each topic lives in its own directory, `learning/<topic-slug>/index.html`, so it's
+served at a clean URL (e.g. `learning/library/`, `learning/query-engine/`) with no
+internal file extension or filename spaces exposed. These pages reference
+`../../support.js` and `../../_ds/...` — two levels up, since each topic page now
+sits one directory deeper than the `learning/` folder itself. If you move a topic page
+in or out of its `learning/<slug>/` directory, fix the depth of every relative path
+(`../../` ↔ `../` ↔ none) accordingly.
 
-The `learning/` pages mirror the standalone `me_learning_code` Claude Design project's
-paths one level down; keep that subtree flat so it can still round-trip via the
-`claude_design` MCP (`DesignSync`) into that project. `index.html` and the shared
-`_ds/`/`support.js` at the repo root are specific to this site and are not part of
-that round-trip.
+Previously this subtree mirrored the standalone `me_learning_code` Claude Design
+project's paths flat (no subdirectories), so it could round-trip via the
+`claude_design` MCP (`DesignSync`) into that project. Moving to per-topic directories
+for clean URLs breaks that flat-mirror assumption — DesignSync round-tripping for
+`learning/` is no longer expected to work as-is. Anyone wanting to resume that
+workflow needs to reconcile the new directory structure against the `me_learning_code`
+project first. `index.html` and the shared `_ds/`/`support.js` at the repo root were
+never part of that round-trip.
 
 ## How the pages work
 
-These are **`.dc.html` (Design Canvas) documents**, not plain HTML — `index.html` is
-too, even though it keeps the `.html` extension for GitHub Pages routing. Each page is:
+These are **Design Canvas documents**, not plain HTML, regardless of what their
+filename or extension looks like — `index.html` at the site root has always been one,
+and the learning pages now are too, each named literally `index.html` inside its own
+`learning/<slug>/` directory so GitHub Pages serves it at that directory's clean URL.
+Each page is:
 
-- `<script src="./support.js">` (or `../support.js` under `learning/`) in `<head>` —
-  the runtime. It injects React 18 UMD from unpkg **at page load**, so pages need
+- `<script src="./support.js">` (or `../../support.js` under `learning/<slug>/`) in
+  `<head>` — the runtime. It injects React 18 UMD from unpkg **at page load**, so pages need
   network access. (Babel standalone is also fetched, but only lazily for
   `x-import`ed JSX modules — no page here uses that.)
 - `<x-dc>` — the template. Inside it, `<helmet>` carries the stylesheet/font/bundle
@@ -62,7 +72,8 @@ too, even though it keeps the `.html` extension for GitHub Pages routing. Each p
   a `class Component extends DCLogic` with `state`, lifecycle methods, and
   `renderVals()` returning everything the template binds to. `data-props` declares
   editor-tunable props (`playbackMs`, `showRedFlags` on the query engine page).
-  `index.html` and `Library.dc.html` are static and skip this script entirely.
+  `index.html` and `learning/library/index.html` are static and skip this script
+  entirely.
 
 The query engine page's `Component` holds `{ step, playing }` and drives the
 eight-stage walkthrough: Play/Back/Step/Reset buttons, a clickable stage rail, and
@@ -75,7 +86,7 @@ Serve over HTTP from the repo root — do not open with `file://`:
 ```bash
 python3 -m http.server 8787
 # then http://localhost:8787/index.html
-# or    http://localhost:8787/learning/Library.dc.html
+# or    http://localhost:8787/learning/library/
 ```
 
 ## Conventions
@@ -131,14 +142,17 @@ python3 -m http.server 8787
 
 ## Adding a topic
 
-1. Create `learning/<Topic Name>.dc.html`, copying the structure of
-   `learning/Query Engine.dc.html` (head → `<x-dc>` → `<helmet>` → content →
-   `data-dc-script`), including the `../support.js` and `../_ds/...` relative paths
-   and the favicon `<link>` (see Conventions above).
-2. Link back to the index with `<a href="Library.dc.html">← Library</a>` and label the
+1. Create `learning/<topic-slug>/index.html` (lowercase-kebab-case slug, e.g.
+   `learning/columnar-formats/index.html`), copying the structure of
+   `learning/query-engine/index.html` (head → `<x-dc>` → `<helmet>` → content →
+   `data-dc-script`), including the favicon `<link>` (see Conventions above).
+2. Fix the relative paths for the new directory depth: `../../support.js` and
+   `../../_ds/...` (two levels up from `learning/<topic-slug>/`, not one).
+3. Link back to the index with `<a href="../library/">← Library</a>` and label the
    topic number in the kicker.
-3. Move the topic's card in `learning/Library.dc.html` from "Planned next" into
-   "Ready to read", matching the existing anchor markup.
+4. Move the topic's card in `learning/library/index.html` from "Planned next" into
+   "Ready to read", matching the existing anchor markup, with its link pointing to
+   `../<topic-slug>/`.
 
 Whenever content is added to a topic (a claim, stat, example, or explanation sourced
 from elsewhere), include a link to the source alongside it. Uncited claims should not
